@@ -199,14 +199,23 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <server_ip> [root_dir]")
+        print(f"Usage: {sys.argv[0]} <server_ip> [-r root_dir] [-s block_size]")
         sys.exit(1)
 
-    server_ip = sys.argv[1]
+    server_ip = sys.argv[1] #use 0.0.0.0 muna since connectionless pa naman
+    root_dir = "."
+    block_size = DEFAULT_BLOCK_SIZE
 
-    if len(sys.argv) > 2:
-        root_dir = sys.argv[2]
-    else:
-        root_dir = "."
+    i = 2
+    while i < len(sys.argv):
+        if sys.argv[i] == "-r" and i + 1 < len(sys.argv):
+            root_dir = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "-s" and i + 1 < len(sys.argv):
+            block_size = int(sys.argv[i + 1])
+            i += 2
+        else:
+            print(f"Usage: {sys.argv[0]} <server_ip> [-r root_dir] [-s block_size]")
+            sys.exit(1)
 
-    tftp_server(server_ip, root_dir)
+    tftp_server(server_ip, root_dir, block_size=block_size)

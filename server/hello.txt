@@ -1,0 +1,17 @@
+No, the provided server code does not specifically handle duplicate ACKs. 
+It follows the basic flow of the TFTP protocol, where the server sends data packets 
+and waits for the corresponding ACK packet from the client. 
+If a timeout occurs while waiting for an ACK, the server assumes that the 
+previous data packet or ACK was lost and retransmits the corresponding packet.
+
+However, the code does not implement any explicit handling of duplicate
+ACKs, which may occur due to network issues or other factors. Duplicate 
+ACKs can lead to retransmission of the same data packet unnecessarily, 
+potentially causing inefficiency in the data transfer process.
+
+To handle duplicate ACKs, you can modify the server code to keep track 
+of the last acknowledged block number. If the server receives a duplicate 
+ACK for a block that has already been acknowledged, it can choose to either
+ ignore the duplicate ACK or retransmit the next data packet. The appropriate 
+ handling of duplicate ACKs may depend on the specific requirements and behavior
+ desired for your TFTP server implementation.
