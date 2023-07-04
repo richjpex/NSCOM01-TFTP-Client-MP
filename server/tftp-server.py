@@ -48,6 +48,16 @@ DEFAULT_PORT = 69
 def create_packet_rrq(filename, mode):
     """
     Create a RRQ (read request) packet.
+    Type   Op #     Format without header
+           2 bytes    string   1 byte     string   1 byte
+            -----------------------------------------------
+    RRQ    | 01 |  Filename  |   0  |    Mode    |   0  |
+            -----------------------------------------------
+    struct.pack("!H", OP_RRQ) packs the opcode value as an unsigned short (2 bytes) in network byte order.
+    filename.encode() converts the filename string into bytes
+    mode.encode() converts the mode string into bytes
+    b"\x00": null byte
+
     """
     return struct.pack("!H", OP_RRQ) + filename.encode() + b"\x00" + mode.encode() + b"\x00"
 
@@ -55,6 +65,15 @@ def create_packet_rrq(filename, mode):
 def create_packet_wrq(filename, mode):
     """
     Create a WRQ (write request) packet.
+    Type   Op #     Format without header
+           2 bytes    string   1 byte     string   1 byte
+            -----------------------------------------------
+    WRQ    | 01 |  Filename  |   0  |    Mode    |   0  |
+            -----------------------------------------------
+    struct.pack("!H", OP_WRQ) packs the opcode value as an unsigned short (2 bytes) in network byte order.
+    filename.encode() converts the filename string into bytes
+    mode.encode() converts the mode string into bytes
+    b"\x00": null byte
     """
     return struct.pack("!H", OP_WRQ) + filename.encode() + b"\x00" + mode.encode() + b"\x00"
 
@@ -62,6 +81,12 @@ def create_packet_wrq(filename, mode):
 def create_packet_data(block_number, data):
     """
     Create a DATA packet.
+
+          2 bytes    2 bytes       n bytes
+          ---------------------------------
+   DATA  | 03    |   Block #  |    Data    |
+          ---------------------------------
+    data already byte because data = f.read(block_size) is in byte
     """
     return struct.pack("!HH", OP_DATA, block_number) + data
 
@@ -69,6 +94,10 @@ def create_packet_data(block_number, data):
 def create_packet_ack(block_number):
     """
     Create an ACK (acknowledgment) packet.
+              2 bytes    2 bytes
+             -------------------
+      ACK   | 04    |   Block #  |
+             --------------------
     """
     return struct.pack("!HH", OP_ACK, block_number)
 
@@ -76,6 +105,10 @@ def create_packet_ack(block_number):
 def create_packet_error(error_code, error_message):
     """
     Create an ERROR packet.
+      2 bytes  2 bytes        string    1 byte
+          ----------------------------------------
+   ERROR | 05    |  ErrorCode |   ErrMsg   |   0  |
+          ----------------------------------------
     """
     return struct.pack("!HH", OP_ERROR, error_code) + error_message.encode() + b"\x00"
 
