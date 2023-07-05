@@ -117,16 +117,21 @@ def parse_packet(packet):
     """
     Parse a TFTP packet and return its opcode and payload.
     """
+    # Unpacks the first 2 bytes of the packet
     opcode = struct.unpack("!H", packet[:2])[0]
 
     if opcode == OP_RRQ or opcode == OP_WRQ:
+        # splits packet, starting from the third byte (index 2)
         parts = packet[2:].split(b"\x00")
+        # byte strings are decoded into string
         filename = parts[0].decode()
         mode = parts[1].decode()
         return opcode, (filename, mode)
 
     elif opcode == OP_DATA:
         block_number = struct.unpack("!H", packet[2:4])[0]
+        # extracts the data content
+        # data starts from index 4 of the packet.
         data = packet[4:]
         return opcode, (block_number, data)
 
@@ -136,6 +141,8 @@ def parse_packet(packet):
 
     elif opcode == OP_ERROR:
         error_code = struct.unpack("!H", packet[2:4])[0]
+        # error message starts from index 4 of the packet
+        # ends at the second-to-last byte of the packet (-1 index).
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
 
@@ -143,18 +150,44 @@ def parse_packet(packet):
 def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Run a TFTP server.
+
+    :param server_ip: represents the IP address or hostname
+                      specifies the network location where the TFTP server is running
+
+    :param root_dir: default value of "." (the current directory)
+                     specify the directory from which the TFTP server should serve files
+
+    :param mode: represents the TFTP transfer mode
+                 default value of MODE_OCTET
+
+    :param block_size: block size for data packets during file transfer
+                       default value of DEFAULT_BLOCK_SIZE
+
+    :param timeout: timeout duration
+
     """
+
     # Create a UDP socket
+    # creates a socket for IPv4 addressing (AF_INET) and using the UDP protocol (SOCK_DGRAM)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # created socket object
     sock.bind((server_ip, DEFAULT_PORT))
     print("Server has been created at {}:{}".format(server_ip, DEFAULT_PORT))
 
     while True:
+        # 516 bytes, consists of 2 bytes for the opcode, 2 bytes for the block number, and up to 512 bytes for the data payload.
+        # recvfrom() returns two values: the received packet and the address from which it was sent.
+        # packet: received packet data assigned to it
+        # (client_ip, client_port): address from which the packet was sent is unpacked
+        #                           variables represent the client's IP address and port number.
         packet, (client_ip, client_port) = sock.recvfrom(block_size + 4)
+        # return value of the parse_packet function is unpacked into two variables: opcode and payload
         opcode, payload = parse_packet(packet)
 
+        # If operation code is for Read Request
         if opcode == OP_RRQ:
             filename, mode = payload
+            # complete local file path that combines the root_dir and filename
             local_filename = os.path.join(root_dir, filename)
 
             if not os.path.isfile(local_filename):

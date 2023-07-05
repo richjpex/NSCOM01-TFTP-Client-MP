@@ -73,7 +73,7 @@ def create_packet_error(error_code, error_message):
     """
     Create an ERROR packet.
 
-      2 bytes  2 bytes        string    1 byte
+            2 bytes  2 bytes        string    1 byte
           ----------------------------------------
    ERROR | 05    |  ErrorCode |   ErrMsg   |   0  |
           ----------------------------------------
@@ -85,16 +85,21 @@ def parse_packet(packet):
     """
     Parse a TFTP packet and return its opcode and payload.
     """
+    # Unpacks the first 2 bytes of the packet
     opcode = struct.unpack("!H", packet[:2])[0]
     
     if opcode == OP_RRQ or opcode == OP_WRQ:
+        # splits packet, starting from the third byte (index 2)
         parts = packet[2:].split(b"\x00")
+        # byte strings are decoded into string
         filename = parts[0].decode()
         mode = parts[1].decode()
         return opcode, (filename, mode)
     
     elif opcode == OP_DATA:
         block_number = struct.unpack("!H", packet[2:4])[0]
+        # extracts the data content
+        # data starts from index 4 of the packet.
         data = packet[4:]
         return opcode, (block_number, data)
     
@@ -104,6 +109,8 @@ def parse_packet(packet):
     
     elif opcode == OP_ERROR:
         error_code = struct.unpack("!H", packet[2:4])[0]
+        # error message starts from index 4 of the packet
+        # ends at the second-to-last byte of the packet (-1 index).
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
     
