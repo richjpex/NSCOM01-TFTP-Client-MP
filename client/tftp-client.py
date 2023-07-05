@@ -122,6 +122,7 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
         local_filename = filename
     
     # Create a UDP socket
+    # creates a socket for IPv4 addressing (AF_INET) and using the UDP protocol (SOCK_DGRAM)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     

@@ -190,73 +190,103 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
             # complete local file path that combines the root_dir and filename
             local_filename = os.path.join(root_dir, filename)
 
+            # checks if file does not exist in the server's file system.
             if not os.path.isfile(local_filename):
+                # creates error packet
                 error_packet = create_packet_error(ERR_FILE_NOT_FOUND, ERROR_MESSAGES[ERR_FILE_NOT_FOUND])
+                # informs the client that the requested file was not found.
                 sock.sendto(error_packet, (client_ip, client_port))
                 continue
 
+            # opens the specified file for reading in binary mode
             with open(local_filename, "rb") as f:
                 block_number = 1
                 while True:
+                    # reads the next block of data from the file f
+                    # the block_size parameter determines the number of bytes to read at a time.
                     data = f.read(block_size)
+                    # RRQ acknowledged by creation of DATA packets
                     data_packet = create_packet_data(block_number, data)
+                    # sends the DATA packet to the client's address
                     sock.sendto(data_packet, (client_ip, client_port))
 
+                    #   handle potential exceptions
                     try:
+                        # receives a packet from the client
+                        # address is discarded using the underscore _
                         packet, _ = sock.recvfrom(block_size + 4)
                     except socket.timeout:
                         print("Timeout waiting for client response")
                         break
 
+                    #   update opcode and payload variables received from client
                     opcode, payload = parse_packet(packet)
 
+                    # ACK packet of client from acknowledgment of DATA packet sent by server to client (not sure)
                     if opcode == OP_ACK:
+                        # block number from the payload of the received ACK packet
                         recv_block_number = payload
 
+                        # if received block numer = sent block number
                         if recv_block_number == block_number:
                             block_number += 1
 
+                            # termination of a transfer if packet of less than block size
                             if len(data) < block_size:
                                 break
-
+                    #  error packet received from the client during the TFTP data transfer process.
                     elif opcode == OP_ERROR:
                         error_code, error_message = payload
                         print(f"Error {error_code}: {error_message}")
                         break
-
+        # If operation code is for Write Request
         elif opcode == OP_WRQ:
             filename, mode = payload
+            # complete local file path that combines the root_dir and filename
             local_filename = os.path.join(root_dir, filename)
 
+            # checks if file exists in the server's file system.
             if os.path.isfile(local_filename):
+                # creates error packet for existing file in server
                 error_packet = create_packet_error(ERR_FILE_EXISTS, ERROR_MESSAGES[ERR_FILE_EXISTS])
+                # sending error packet to client
                 sock.sendto(error_packet, (client_ip, client_port))
                 continue
-
+            # opens the local file specified by local_filename in write binary mode
             with open(local_filename, "wb") as f:
+                # not sure, check later
                 block_number = 0
                 while True:
+                    # creates an acknowledgment (ACK) packet using the current block number
                     ack_packet = create_packet_ack(block_number)
+                    # sends the ACK packet to client
                     sock.sendto(ack_packet, (client_ip, client_port))
 
+                    #   handle potential exceptions
                     try:
+                        # receives a packet from the client
+                        # address is discarded using the underscore _
                         packet, _ = sock.recvfrom(block_size + 4)
                     except socket.timeout:
                         print("Timeout waiting for client response")
                         break
 
+                    #   update opcode and payload variables received from client
                     opcode, payload = parse_packet(packet)
 
+                    #  ACK packets sent by server are acknowledged by DATA packets
                     if opcode == OP_DATA:
+                        # block number from the payload of the received DATA packet
                         recv_block_number, data = payload
 
                         if recv_block_number == block_number + 1:
                             block_number += 1
+                            # writes the received data to the open file
                             f.write(data)
 
                             if len(data) < block_size:
                                 break
-
+                    # prints error code sent by client to server side
                     elif opcode == OP_ERROR:
                         error_code, error_message = payload
                         print(f"Error {error_code}: {error_message}")
@@ -264,6 +294,7 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
 
 
 if __name__ == "__main__":
+    # checking the length of the sys.argv
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <server_ip> [-r root_dir] [-s block_size]")
         sys.exit(1)
