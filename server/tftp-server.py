@@ -206,6 +206,7 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                     error_packet = create_packet_error(ERR_DISK_FULL, ERROR_MESSAGES[ERR_DISK_FULL])
                     # informs the client that the requested file was not found.
                     sock.sendto(error_packet, (client_ip, client_port))
+                    continue
 
 
             # opens the specified file for reading in binary mode
