@@ -4,7 +4,7 @@ Marissa Ann Villaceran
 NSCOM01 S12
 """
 
-import socket, struct, os, sys, shutil
+import socket, struct, os, sys
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -43,7 +43,6 @@ MODE_OCTET = "octet"
 DEFAULT_BLOCK_SIZE = 512
 DEFAULT_TIMEOUT = 5
 DEFAULT_PORT = 69
-DEFAULT_PATH = '..\client'
 
 
 def create_packet_rrq(filename, mode):
@@ -194,21 +193,6 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                 sock.sendto(error_packet, (client_ip, client_port))
                 continue
 
-            # file exists (necessary pa ba to na IF statement?)
-            if os.path.isfile(local_filename):
-                # retrieves file size of requested file in bytes
-                file_size = os.stat(filename).st_size
-                # retrieves free disk space in client path
-                stat = shutil.disk_usage(DEFAULT_PATH).free
-                # If client does not have enough disk space
-                if file_size > stat:
-                    # creates error packet
-                    error_packet = create_packet_error(ERR_DISK_FULL, ERROR_MESSAGES[ERR_DISK_FULL])
-                    # informs the client that the requested file was not found.
-                    sock.sendto(error_packet, (client_ip, client_port))
-                    continue
-
-
             # opens the specified file for reading in binary mode
             with open(local_filename, "rb") as f:
                 block_number = 1
@@ -250,12 +234,6 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                         error_code, error_message = payload
                         print(f"Error {error_code}: {error_message}")
                         break
-
-                    retries += 1
-                else:
-                    print("Exceeded maximum retries.")
-                    break
-
         # If operation code is for Write Request
         elif opcode == OP_WRQ:
             filename, mode = payload
