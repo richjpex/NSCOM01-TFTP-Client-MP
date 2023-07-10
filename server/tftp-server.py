@@ -196,7 +196,10 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
             # opens the specified file for reading in binary mode
             with open(local_filename, "rb") as f:
                 block_number = 1
+                count = 0
                 while True:
+                    # Position of the file pointer before reading the data
+                    file_pos = f.tell()
                     # reads the next block of data from the file f
                     # the block_size parameter determines the number of bytes to read at a time.
                     data = f.read(block_size)
@@ -217,7 +220,7 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                     #   update opcode and payload variables received from client
                     opcode, payload = parse_packet(packet)
 
-                    # ACK packet of client from acknowledgment of DATA packet sent by server to client (not sure)
+                    # ACK packet of client from acknowledgment of DATA packet sent by server to client
                     if opcode == OP_ACK:
                         # block number from the payload of the received ACK packet
                         recv_block_number = payload

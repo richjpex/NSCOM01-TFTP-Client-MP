@@ -14,6 +14,7 @@ MODE_OCTET = "octet"
 # TFTP default block size and timeout values
 DEFAULT_BLOCK_SIZE = 512
 DEFAULT_TIMEOUT = 5
+DEFAULT_RETRY = 3
 
 def create_packet_rrq(filename, mode):
     """
@@ -113,7 +114,7 @@ def parse_packet(packet):
         # ends at the second-to-last byte of the packet (-1 index).
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
-    
+
 def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
@@ -168,9 +169,23 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
                 if recv_block_number == block_number:
                     f.write(data)
                     ack_packet = create_packet_ack(block_number)
-                    sock.sendto(ack_packet, (server_ip, server_port))
+                    retries = 0
+                    response_received = False
+                    while retries < DEFAULT_RETRY and not response_received:
+                        try:
+                            sock.sendto(ack_packet, (server_ip, server_port))
+                            sock.settimeout(timeout)
+                            response_received = True
+                        except socket.timeout:
+                            print("Timeout waiting for server response. Retrying...")
+                            retries += 1
+
+                    if not response_received:
+                        print("Max retries reached. Failed to receive server response.")
+                        return
+
                     block_number += 1
-                    
+
                     if len(data) < block_size:
                         break
                 # if packet gets lost from server
