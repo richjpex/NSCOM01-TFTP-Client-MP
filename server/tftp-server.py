@@ -196,7 +196,7 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
             # opens the specified file for reading in binary mode
             with open(local_filename, "rb") as f:
                 block_number = 1
-                count = 0
+                sent_ack = []
                 while True:
                     # Position of the file pointer before reading the data
                     file_pos = f.tell()
@@ -226,12 +226,16 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                         recv_block_number = payload
 
                         # if received block numer = sent block number
-                        if recv_block_number == block_number:
+                        if recv_block_number == block_number and recv_block_number not in sent_ack:
+                            sent_ack.append(recv_block_number)
                             block_number += 1
 
                             # termination of a transfer if packet of less than block size
                             if len(data) < block_size:
                                 break
+                        else:
+                            # Move the file pointer back to the position before reading the data
+                            f.seek(file_pos)
                     #  error packet received from the client during the TFTP data transfer process.
                     elif opcode == OP_ERROR:
                         error_code, error_message = payload
