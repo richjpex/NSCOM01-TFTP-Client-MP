@@ -4,7 +4,7 @@ Marissa Ann Villaceran
 NSCOM01 S12
 """
 
-import socket, struct, os, sys, time, shutil
+import socket, struct, os, sys, shutil
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -212,8 +212,7 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
             # opens the specified file for reading in binary mode
             with open(local_filename, "rb") as f:
                 block_number = 1
-                retries = 0
-                while retries < 5:
+                while True:
                     # reads the next block of data from the file f
                     # the block_size parameter determines the number of bytes to read at a time.
                     data = f.read(block_size)
@@ -222,25 +221,14 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                     # sends the DATA packet to the client's address
                     sock.sendto(data_packet, (client_ip, client_port))
 
-                    #start counting time starting here
-                    start_time = time.time()
-                    # while the time is less than the timeout 5 seconds
-                    while time.time() - start_time < timeout:
-                        #   handle potential exceptions
-                        try:
-                            # receives a packet from the client
-                            # address is discarded using the underscore _
-                            packet, _ = sock.recvfrom(block_size + 4)
-                            break
-                        except socket.timeout:
-                            print("Timeout waiting for client response")
-                            pass
-
-                    # else retry again
-                    else:
+                    #   handle potential exceptions
+                    try:
+                        # receives a packet from the client
+                        # address is discarded using the underscore _
+                        packet, _ = sock.recvfrom(block_size + 4)
+                    except socket.timeout:
                         print("Timeout waiting for client response")
-                        retries += 1
-                        continue
+                        break
 
                     #   update opcode and payload variables received from client
                     opcode, payload = parse_packet(packet)
