@@ -4,7 +4,7 @@ Marissa Ann Villaceran
 NSCOM01 S12
 """
 
-import socket, struct, os, sys, shutil
+import socket, struct, os, sys
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -43,7 +43,6 @@ MODE_OCTET = "octet"
 DEFAULT_BLOCK_SIZE = 512
 DEFAULT_TIMEOUT = 5
 DEFAULT_PORT = 69
-DEFAULT_PATH = '..\client'
 
 
 def create_packet_rrq(filename, mode):
@@ -176,11 +175,6 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
     print("Server has been created at {}:{}".format(server_ip, DEFAULT_PORT))
 
     while True:
-        # 516 bytes, consists of 2 bytes for the opcode, 2 bytes for the block number, and up to 512 bytes for the data payload.
-        # recvfrom() returns two values: the received packet and the address from which it was sent.
-        # packet: received packet data assigned to it
-        # (client_ip, client_port): address from which the packet was sent is unpacked
-        #                           variables represent the client's IP address and port number.
         packet, (client_ip, client_port) = sock.recvfrom(block_size + 4)
         # return value of the parse_packet function is unpacked into two variables: opcode and payload
         opcode, payload = parse_packet(packet)
@@ -198,21 +192,6 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                 # informs the client that the requested file was not found.
                 sock.sendto(error_packet, (client_ip, client_port))
                 continue
-
-            # file exists (necessary pa ba to na IF statement?)
-            if os.path.isfile(local_filename):
-                # retrieves file size of requested file in bytes
-                file_size = os.stat(filename).st_size
-                # retrieves free disk space in client path
-                stat = shutil.disk_usage(DEFAULT_PATH).free
-                # If client does not have enough disk space
-                if file_size > stat:
-                    # creates error packet
-                    error_packet = create_packet_error(ERR_DISK_FULL, ERROR_MESSAGES[ERR_DISK_FULL])
-                    # informs the client that the requested file was not found.
-                    sock.sendto(error_packet, (client_ip, client_port))
-                    continue
-
 
             # opens the specified file for reading in binary mode
             with open(local_filename, "rb") as f:
@@ -255,12 +234,6 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                         error_code, error_message = payload
                         print(f"Error {error_code}: {error_message}")
                         break
-
-                    retries += 1
-                else:
-                    print("Exceeded maximum retries.")
-                    break
-
         # If operation code is for Write Request
         elif opcode == OP_WRQ:
             filename, mode = payload
@@ -275,6 +248,7 @@ def tftp_server(server_ip, root_dir=".", mode=MODE_OCTET, block_size=DEFAULT_BLO
                 sock.sendto(error_packet, (client_ip, client_port))
                 continue
             # opens the local file specified by local_filename in write binary mode
+            # writes file from client to server
             with open(local_filename, "wb") as f:
                 # not sure, check later
                 block_number = 0
