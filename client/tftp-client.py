@@ -117,25 +117,7 @@ def parse_packet(packet):
 def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
-
-    :param server_ip: IP address of the TFTP server.
-
-    :param server_port: port number on which the TFTP server is listening
-
-    :param filename: name of the file to be downloaded from the TFTP server
-
-    :param local_filename:  name of the local file to which the downloaded file will be saved
-
-    :param mode: represents the TFTP transfer mode
-                 default value of MODE_OCTET
-
-    :param block_size: block size for data packets during file transfer
-                       default value of DEFAULT_BLOCK_SIZE
-
-    :param timeout: timeout duration
     """
-    # if no specific local filename is provided,
-    # the downloaded file will be saved using the same name as the original file on the TFTP server
     if local_filename is None:
         local_filename = filename
     
@@ -144,13 +126,11 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     
-    # Creates RRQ packet
+    # Send RRQ packet
     rrq_packet = create_packet_rrq(filename, mode)
-    # sends RRQ packet
     sock.sendto(rrq_packet, (server_ip, server_port))
     
     # Receive DATA packets and send ACK packets
-    # wb because downloading file from server to client
     with open(local_filename, "wb") as f:
         block_number = 1
         while True:
@@ -173,7 +153,7 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
                     
                     if len(data) < block_size:
                         break
-                # if packet gets lost from server
+                
                 elif recv_block_number < block_number:
                     ack_packet = create_packet_ack(recv_block_number)
                     sock.sendto(ack_packet, (server_ip, server_port))
@@ -213,9 +193,9 @@ def tftp_client_put(server_ip, server_port, filename, local_filename=None, mode=
             if opcode == OP_ACK:
                 recv_block_number = payload
                 
-                if recv_block_number + 1 == block_number:
+                if recv_block_number == block_number:
                     data = f.read(block_size)
-                    data_packet = create_packet_data(block_number, data)
+                    data_packet = create_packet_data(block_number + 1, data)
                     sock.sendto(data_packet, (server_ip, server_port))
                     block_number += 1
                     
