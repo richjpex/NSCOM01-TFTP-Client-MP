@@ -114,7 +114,7 @@ def parse_packet(packet):
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
     
-def tftp_client_get(server_ip, server_port, filename, local_filename, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
 
@@ -232,7 +232,6 @@ def tftp_client_put(server_ip, server_port, filename, local_filename=None, mode=
 if __name__ == "__main__":
     server_ip = input("Server IP: ") #when testing, use 0.0.0.0
     server_port = int(input("Server port: ")) #when testing, use 69
-
     while True:
 
         command = input("Command (get/put/exit): ")
@@ -244,8 +243,7 @@ if __name__ == "__main__":
             filename = input("Filename: ")
             
             if command == "get":
-                user_filename = int(input("Save file as: "))
-                tftp_client_get(server_ip, server_port, filename, user_filename)
+                tftp_client_get(server_ip, server_port, filename)
             
             elif command=="put":
                 tftp_client_put(server_ip, server_port, filename)
