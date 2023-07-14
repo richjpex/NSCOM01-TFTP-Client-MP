@@ -1,4 +1,5 @@
 import socket, struct, sys, os
+from art import * #Do pip3 install art
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -15,6 +16,7 @@ MODE_OCTET = "octet"
 DEFAULT_BLOCK_SIZE = 512
 DEFAULT_TIMEOUT = 5
 DEFAULT_RETRY = 3
+DEFAULT_PORT = 69
 
 def create_packet_rrq(filename, mode):
     """
@@ -115,7 +117,7 @@ def parse_packet(packet):
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
 
-def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_get(server_ip, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
 
@@ -123,9 +125,9 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
 
     :param server_port: port number on which the TFTP server is listening
 
-    :param filename: name of the file to be downloaded from the TFTP server
+    :param client_filename: name of the file to be downloaded locally
 
-    :param local_filename:  name of the local file to which the downloaded file will be saved
+    :param server_filename:  name of the file found on the TFTP server
 
     :param mode: represents the TFTP transfer mode
                  default value of MODE_OCTET
@@ -137,8 +139,8 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
     """
     # if no specific local filename is provided,
     # the downloaded file will be saved using the same name as the original file on the TFTP server
-    if local_filename is None:
-        local_filename = filename
+    if server_filename is None:
+        server_filename = client_filename
     
     # Create a UDP socket
     # creates a socket for IPv4 addressing (AF_INET) and using the UDP protocol (SOCK_DGRAM)
@@ -146,13 +148,13 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
     sock.settimeout(timeout)
     
     # Creates RRQ packet
-    rrq_packet = create_packet_rrq(filename, mode)
+    rrq_packet = create_packet_rrq(client_filename, mode)
     # sends RRQ packet
     sock.sendto(rrq_packet, (server_ip, server_port))
     
     # Receive DATA packets and send ACK packets
     # wb because downloading file from server to client
-    with open(local_filename, "wb") as f:
+    with open(server_filename, "wb") as f:
         block_number = 1
         while True:
             try:
@@ -198,23 +200,23 @@ def tftp_client_get(server_ip, server_port, filename, local_filename=None, mode=
                 print(f"Error {error_code}: {error_message}")
                 return
 
-def tftp_client_put(server_ip, server_port, filename, local_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_put(server_ip, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Upload a file to a TFTP server.
     """
-    if local_filename is None:
-        local_filename = filename
+    if server_filename is None:
+        server_filename = client_filename
     
     # Create a UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     
     # Send WRQ packet
-    wrq_packet = create_packet_wrq(filename, mode)
+    wrq_packet = create_packet_wrq(server_filename, mode)
     sock.sendto(wrq_packet, (server_ip, server_port))
     
     # Receive ACK packets and send DATA packets
-    with open(local_filename, "rb") as f:
+    with open(client_filename, "rb") as f:
         block_number = 1
         while True:
             try:
@@ -245,8 +247,9 @@ def tftp_client_put(server_ip, server_port, filename, local_filename=None, mode=
 # in the main, ask the user to enter the server IP address, port number, and the file name to be downloaded or uploaded
 # then call the appropriate function to download or upload the file
 if __name__ == "__main__":
+    print('\n' * 50)
+    tprint("TFTP Client")
     server_ip = input("Server IP: ") #when testing, use 0.0.0.0
-    server_port = int(input("Server port: ")) #when testing, use 69
     while True:
 
         command = input("Command (get/put/exit): ")
@@ -255,13 +258,17 @@ if __name__ == "__main__":
             sys.exit(0)
 
         elif command == "get" or command == "put":
-            filename = input("Filename: ")
+            
             
             if command == "get":
-                tftp_client_get(server_ip, server_port, filename)
+                server_filename = input("Server Filename: ")
+                client_filename = input("Client Filename: ")
+                tftp_client_get(server_ip, DEFAULT_PORT, server_filename, client_filename)
             
             elif command=="put":
-                tftp_client_put(server_ip, server_port, filename)
+                client_filename = input("Client Filename: ")
+                server_filename = input("Server Filename: ")
+                tftp_client_put(server_ip, DEFAULT_PORT, client_filename, server_filename)
         
         else:
             print("Invalid command")
