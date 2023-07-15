@@ -220,6 +220,8 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
             elif opcode == OP_ERROR:
                 error_code, error_message = payload
                 print(f"Error {error_code}: {error_message}")
+                f.close()
+                os.remove(server_filename)
                 return
 
 def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
@@ -271,6 +273,7 @@ def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_fi
                     return
     else:
         # creates error packet
+        print(f"Error {ERR_FILE_NOT_FOUND}: {ERROR_MESSAGES[ERR_FILE_NOT_FOUND]}")
         error_packet = create_packet_error(ERR_FILE_NOT_FOUND, ERROR_MESSAGES[ERR_FILE_NOT_FOUND])
         # informs the server that the requested file was not found.
         sock.sendto(error_packet, (server_ip, server_port))
