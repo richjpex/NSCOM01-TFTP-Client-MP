@@ -1,5 +1,6 @@
-import socket, struct, sys, os
-#from art import * #Do pip3 install art
+import socket, struct, sys, os, shutil, subprocess
+# subprocess.run(["pip", "install", "art"])
+# from art import * #Do pip3 install art
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -139,7 +140,7 @@ def parse_packet(packet):
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
 
-def tftp_client_get(server_ip, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_get(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
 
@@ -173,7 +174,7 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
     rrq_packet = create_packet_rrq(client_filename, mode)
     # sends RRQ packet
     sock.sendto(rrq_packet, (server_ip, server_port))
-    
+
     # Receive DATA packets and send ACK packets
     # wb because downloading file from server to client
     with open(server_filename, "wb") as f:
@@ -192,6 +193,21 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
                 
                 if recv_block_number == block_number:
                     f.write(data)
+                    # Flush the file buffer to ensure data is written to disk
+                    f.flush()
+                    free_space=shutil.disk_usage(file_dir).free
+
+                    if free_space < block_size:
+                        # creates error packet
+                        print(f"Error {ERR_DISK_FULL}: {ERROR_MESSAGES[ERR_DISK_FULL]}")
+                        error_packet = create_packet_error(ERR_DISK_FULL, ERROR_MESSAGES[ERR_DISK_FULL])
+                        # informs the server that the client's disk space is full
+                        sock.sendto(error_packet, (server_ip, server_port))
+                        f.close()
+                        # removes corrupted file
+                        os.remove(os.path.join(file_dir, server_filename))
+                        return
+
                     ack_packet = create_packet_ack(block_number)
                     retries = 0
                     response_received = False
@@ -221,14 +237,15 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
                 error_code, error_message = payload
                 print(f"Error {error_code}: {error_message}")
                 f.close()
-                os.remove(server_filename)
+                # removes file because corrupted
+                os.remove(os.path.join(file_dir, server_filename))
                 return
 
 def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Upload a file to a TFTP server.
     """
-    print("DEBUG: file_dir")
+
     if server_filename is None:
         server_filename = client_filename
     
@@ -297,7 +314,8 @@ if __name__ == "__main__":
             if command == "get":
                 server_filename = input("Server Filename: ")
                 client_filename = input("Client Filename: ")
-                tftp_client_get(server_ip, DEFAULT_PORT, server_filename, client_filename)
+                file_dir = input("File directory of file being downloaded from the server: ")
+                tftp_client_get(server_ip, file_dir, DEFAULT_PORT, server_filename, client_filename)
             
             elif command == "put":
                 client_filename = input("Client Filename: ")
