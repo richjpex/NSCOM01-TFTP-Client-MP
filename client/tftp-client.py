@@ -140,7 +140,7 @@ def parse_packet(packet):
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
 
-def tftp_client_get(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_get(server_ip, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
 
@@ -195,7 +195,7 @@ def tftp_client_get(server_ip, file_dir, server_port, client_filename, server_fi
                     f.write(data)
                     # Flush the file buffer to ensure data is written to disk
                     f.flush()
-                    free_space=shutil.disk_usage(file_dir).free
+                    free_space=shutil.disk_usage(".").free
 
                     if free_space < block_size:
                         # creates error packet
@@ -314,8 +314,7 @@ if __name__ == "__main__":
             if command == "get":
                 server_filename = input("Server Filename: ")
                 client_filename = input("Client Filename: ")
-                file_dir = input("File directory of file being downloaded from the server: ")
-                tftp_client_get(server_ip, file_dir, DEFAULT_PORT, server_filename, client_filename)
+                tftp_client_get(server_ip,  DEFAULT_PORT, server_filename, client_filename)
             
             elif command == "put":
                 client_filename = input("Client Filename: ")
