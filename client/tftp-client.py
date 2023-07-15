@@ -1,5 +1,5 @@
 import socket, struct, sys, os
-from art import * #Do pip3 install art
+#from art import * #Do pip3 install art
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -7,6 +7,28 @@ OP_WRQ = 2
 OP_DATA = 3
 OP_ACK = 4
 OP_ERROR = 5
+
+# TFTP error codes
+ERR_NOT_DEFINED = 0
+ERR_FILE_NOT_FOUND = 1
+ERR_ACCESS_VIOLATION = 2
+ERR_DISK_FULL = 3
+ERR_ILLEGAL_OPERATION = 4
+ERR_UNKNOWN_TID = 5
+ERR_FILE_EXISTS = 6
+ERR_NO_SUCH_USER = 7
+
+# TFTP error messages
+ERROR_MESSAGES = {
+    ERR_NOT_DEFINED: "Not defined",
+    ERR_FILE_NOT_FOUND: "File not found",
+    ERR_ACCESS_VIOLATION: "Access violation",
+    ERR_DISK_FULL: "Disk full or allocation exceeded",
+    ERR_ILLEGAL_OPERATION: "Illegal TFTP operation",
+    ERR_UNKNOWN_TID: "Unknown transfer ID",
+    ERR_FILE_EXISTS: "File already exists",
+    ERR_NO_SUCH_USER: "No such user"
+}
 
 # TFTP transfer modes
 MODE_NETASCII = "netascii"
@@ -141,7 +163,7 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
     # the downloaded file will be saved using the same name as the original file on the TFTP server
     if server_filename is None:
         server_filename = client_filename
-    
+
     # Create a UDP socket
     # creates a socket for IPv4 addressing (AF_INET) and using the UDP protocol (SOCK_DGRAM)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -200,56 +222,65 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
                 print(f"Error {error_code}: {error_message}")
                 return
 
-def tftp_client_put(server_ip, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Upload a file to a TFTP server.
     """
+    print("DEBUG: file_dir")
     if server_filename is None:
         server_filename = client_filename
     
     # Create a UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
-    
-    # Send WRQ packet
-    wrq_packet = create_packet_wrq(server_filename, mode)
-    sock.sendto(wrq_packet, (server_ip, server_port))
-    
-    # Receive ACK packets and send DATA packets
-    with open(client_filename, "rb") as f:
-        block_number = 1
-        while True:
-            try:
-                packet, (server_ip, server_port) = sock.recvfrom(block_size + 4)
-            except socket.timeout:
-                print("Timeout waiting for server response")
-                return
-            
-            opcode, payload = parse_packet(packet)
-            
-            if opcode == OP_ACK:
-                recv_block_number = payload
-                
-                if recv_block_number + 1 == block_number:
-                    data = f.read(block_size)
-                    data_packet = create_packet_data(block_number, data)
-                    sock.sendto(data_packet, (server_ip, server_port))
-                    block_number += 1
-                    
-                    if len(data) < block_size:
-                        break
-            
-            elif opcode == OP_ERROR:
-                error_code, error_message = payload
-                print(f"Error {error_code}: {error_message}")
-                return
+
+    # complete local file path that combines the file directory and filename
+    local_filename = os.path.join(file_dir, server_filename)
+    if os.path.isfile(local_filename):
+        # Send WRQ packet
+        wrq_packet = create_packet_wrq(server_filename, mode)
+        sock.sendto(wrq_packet, (server_ip, server_port))
+
+        # Receive ACK packets and send DATA packets
+        with open(client_filename, "rb") as f:
+            block_number = 1
+            while True:
+                try:
+                    packet, (server_ip, server_port) = sock.recvfrom(block_size + 4)
+                except socket.timeout:
+                    print("Timeout waiting for server response")
+                    return
+
+                opcode, payload = parse_packet(packet)
+
+                if opcode == OP_ACK:
+                    recv_block_number = payload
+
+                    if recv_block_number + 1 == block_number:
+                        data = f.read(block_size)
+                        data_packet = create_packet_data(block_number, data)
+                        sock.sendto(data_packet, (server_ip, server_port))
+                        block_number += 1
+
+                        if len(data) < block_size:
+                            break
+
+                elif opcode == OP_ERROR:
+                    error_code, error_message = payload
+                    print(f"Error {error_code}: {error_message}")
+                    return
+    else:
+        # creates error packet
+        error_packet = create_packet_error(ERR_FILE_NOT_FOUND, ERROR_MESSAGES[ERR_FILE_NOT_FOUND])
+        # informs the server that the requested file was not found.
+        sock.sendto(error_packet, (server_ip, server_port))
 
 # in the main, ask the user to enter the server IP address, port number, and the file name to be downloaded or uploaded
 # then call the appropriate function to download or upload the file
 if __name__ == "__main__":
     print('\n' * 50)
-    tprint("TFTP Client")
-    server_ip = input("Server IP: ") #when testing, use 0.0.0.0
+    print("TFTP Client")
+    server_ip = input("Server IP: ")
     while True:
 
         command = input("Command (get/put/exit): ")
@@ -265,10 +296,11 @@ if __name__ == "__main__":
                 client_filename = input("Client Filename: ")
                 tftp_client_get(server_ip, DEFAULT_PORT, server_filename, client_filename)
             
-            elif command=="put":
+            elif command == "put":
                 client_filename = input("Client Filename: ")
                 server_filename = input("Server Filename: ")
-                tftp_client_put(server_ip, DEFAULT_PORT, client_filename, server_filename)
+                file_dir = input("File directory of file being uploaded to server: ")
+                tftp_client_put(server_ip, file_dir, DEFAULT_PORT, client_filename, server_filename)
         
         else:
             print("Invalid command")
