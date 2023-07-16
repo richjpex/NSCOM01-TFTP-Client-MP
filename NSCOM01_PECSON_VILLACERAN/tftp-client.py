@@ -1,6 +1,4 @@
 import socket, struct, sys, os, shutil, subprocess
-subprocess.run(["pip", "install", "art"])
-from art import * #Do pip3 install art
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -325,7 +323,11 @@ def get_file_extension(filename):
 # then call the appropriate function to download or upload the file
 if __name__ == "__main__":
     print('\n' * 50)
-    tprint("TFTP Client")
+    print(" _____  _____  _____  ____     ____  _  _               _")
+    print("|_   _||  ___||_   _||  _ \   / ___|| |(_)  ___  _ __  | |_")
+    print("  | |  | |_     | |  | |_) | | |    | || | / _ \| '_ \ | __|")
+    print("  | |  |  _|    | |  |  __/  | |___ | || ||  __/| | | || |_")
+    print("  |_|  |_|      |_|  |_|      \____||_||_| \___||_| |_| \__|")
 
     server_ip = input("Server IP: ")
     
