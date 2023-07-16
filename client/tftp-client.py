@@ -303,6 +303,9 @@ def list_files_and_sizes(directory):
             size = os.path.getsize(os.path.join(directory, file))
             print(f"{file} - {size} bytes")
 
+def get_file_extension(filename):
+    return os.path.splitext(filename)[1]
+
 # in the main, ask the user to enter the server IP address, port number, and the file name to be downloaded or uploaded
 # then call the appropriate function to download or upload the file
 if __name__ == "__main__":
@@ -327,6 +330,12 @@ if __name__ == "__main__":
             if command == "get":
                 server_filename = input("Server Filename: ")
                 client_filename = input("Client Filename: ")
+
+                client_extension = get_file_extension(client_filename)
+                server_extension = get_file_extension(server_filename)
+                if client_extension != server_extension:
+                    print("Error: Client and Server file names must have the same extension.")
+                    continue
                 tftp_client_get(server_ip,  DEFAULT_PORT, server_filename, client_filename)
             
             elif command == "put":
@@ -340,6 +349,12 @@ if __name__ == "__main__":
                 print("-----------------------------------")
                 client_filename = input("Client Filename: ")
                 server_filename = input("Server Filename: ")
+                
+                client_extension = get_file_extension(client_filename)
+                server_extension = get_file_extension(server_filename)
+                if client_extension != server_extension:
+                    print("Error: Client and Server file names must have the same extension.")
+                    continue
                 
                 tftp_client_put(server_ip, file_dir, DEFAULT_PORT, client_filename, server_filename)
         
