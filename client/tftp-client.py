@@ -140,13 +140,15 @@ def parse_packet(packet):
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
 
-def tftp_client_get(server_ip, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def tftp_client_get(server_ip, server_port, save_dir, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
 
     :param server_ip: IP address of the TFTP server.
 
     :param server_port: port number on which the TFTP server is listening
+
+    :param save_dir: directory where the downloaded file will be saved
 
     :param client_filename: name of the file to be downloaded locally
 
@@ -176,8 +178,10 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
     sock.sendto(rrq_packet, (server_ip, server_port))
 
     # Receive DATA packets and send ACK packets
+    # Saves the downloaded file to the specified save_folder
+    save_path = os.path.join(save_dir, server_filename)
     # wb because downloading file from server to client
-    with open(server_filename, "wb") as f:
+    with open(save_path, "wb") as f:
         block_number = 1
         while True:
             try:
@@ -205,7 +209,7 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
                         sock.sendto(error_packet, (server_ip, server_port))
                         f.close()
                         # removes corrupted file
-                        os.remove(os.path.join(file_dir, server_filename))
+                        os.remove(save_path)
                         return
 
                     ack_packet = create_packet_ack(block_number)
@@ -337,13 +341,14 @@ if __name__ == "__main__":
             if command == "get":
                 server_filename = input("Server Filename: ")
                 client_filename = input("Client Filename: ")
+                save_folder = input("Which folder do you want to save it in? ")
 
                 client_extension = get_file_extension(client_filename)
                 server_extension = get_file_extension(server_filename)
                 if client_extension != server_extension:
                     print("Error: Client and Server file names must have the same extension.")
                     continue
-                tftp_client_get(server_ip,  DEFAULT_PORT, server_filename, client_filename)
+                tftp_client_get(server_ip, DEFAULT_PORT, save_folder, server_filename, client_filename)
             
             elif command == "put":
                 file_dir = input("File directory of file to upload (Press Enter to use current directory):  ")
