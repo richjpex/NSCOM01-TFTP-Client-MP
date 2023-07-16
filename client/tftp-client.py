@@ -227,6 +227,7 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
                     block_number += 1
 
                     if len(data) < block_size:
+                        print("Download finished!")
                         break
                 # if packet gets lost from server
                 elif recv_block_number < block_number:
@@ -238,7 +239,7 @@ def tftp_client_get(server_ip, server_port, client_filename, server_filename=Non
                 print(f"Error {error_code}: {error_message}")
                 f.close()
                 # removes file because corrupted
-                os.remove(os.path.join(file_dir, server_filename))
+                os.remove(os.path.join(".", server_filename))
                 return
 
 def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
@@ -254,7 +255,7 @@ def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_fi
     sock.settimeout(timeout)
 
     # complete local file path that combines the file directory and filename
-    local_filename = os.path.join(file_dir, server_filename)
+    local_filename = os.path.join(file_dir, client_filename)
     if os.path.isfile(local_filename):
         # Send WRQ packet
         wrq_packet = create_packet_wrq(server_filename, mode)
@@ -282,6 +283,7 @@ def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_fi
                         block_number += 1
 
                         if len(data) < block_size:
+                            print("Upload finished!")
                             break
 
                 elif opcode == OP_ERROR:
@@ -295,21 +297,32 @@ def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_fi
         # informs the server that the requested file was not found.
         sock.sendto(error_packet, (server_ip, server_port))
 
+def list_files_and_sizes(directory):
+    for file in os.listdir(directory):
+        if os.path.isfile(os.path.join(directory, file)):
+            size = os.path.getsize(os.path.join(directory, file))
+            print(f"{file} - {size} bytes")
+
 # in the main, ask the user to enter the server IP address, port number, and the file name to be downloaded or uploaded
 # then call the appropriate function to download or upload the file
 if __name__ == "__main__":
     print('\n' * 50)
     print("TFTP Client")
+
     server_ip = input("Server IP: ")
     while True:
 
-        command = input("Command (get/put/exit): ")
+        command = input("Command (get/put/ls/exit): ")
         if command == "exit":
             print("Goodbye!")
             sys.exit(0)
 
+        elif command == "ls":
+            print("-----------------------------------")
+            list_files_and_sizes(".")
+            print("-----------------------------------")
+
         elif command == "get" or command == "put":
-            
             
             if command == "get":
                 server_filename = input("Server Filename: ")
@@ -317,9 +330,17 @@ if __name__ == "__main__":
                 tftp_client_get(server_ip,  DEFAULT_PORT, server_filename, client_filename)
             
             elif command == "put":
+                file_dir = input("File directory of file to upload (Press Enter to use current directory):  ")
+                if not file_dir:
+                    file_dir = os.getcwd()
+                
+                os.chdir(file_dir)
+                print("-----------------------------------")
+                list_files_and_sizes(".")
+                print("-----------------------------------")
                 client_filename = input("Client Filename: ")
                 server_filename = input("Server Filename: ")
-                file_dir = input("File directory of file being uploaded to server: ")
+                
                 tftp_client_put(server_ip, file_dir, DEFAULT_PORT, client_filename, server_filename)
         
         else:
