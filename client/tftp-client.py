@@ -256,12 +256,13 @@ def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_fi
 
     # complete local file path that combines the file directory and filename
     local_filename = os.path.join(file_dir, client_filename)
-    if os.path.isfile(local_filename):
-        # Send WRQ packet
-        wrq_packet = create_packet_wrq(server_filename, mode)
-        sock.sendto(wrq_packet, (server_ip, server_port))
 
-        # Receive ACK packets and send DATA packets
+    # Send WRQ packet
+    wrq_packet = create_packet_wrq(server_filename, mode)
+    sock.sendto(wrq_packet, (server_ip, server_port))
+
+    # Receive ACK packets and send DATA packets
+    if os.path.isfile(local_filename):
         with open(client_filename, "rb") as f:
             block_number = 1
             while True:
@@ -291,11 +292,17 @@ def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_fi
                     print(f"Error {error_code}: {error_message}")
                     return
     else:
+        try:
+            packet, (server_ip, server_port) = sock.recvfrom(block_size + 4)
+        except socket.timeout:
+            print("Timeout waiting for server response")
+            return
         # creates error packet
         print(f"Error {ERR_FILE_NOT_FOUND}: {ERROR_MESSAGES[ERR_FILE_NOT_FOUND]}")
         error_packet = create_packet_error(ERR_FILE_NOT_FOUND, ERROR_MESSAGES[ERR_FILE_NOT_FOUND])
         # informs the server that the requested file was not found.
         sock.sendto(error_packet, (server_ip, server_port))
+        return
 
 def list_files_and_sizes(directory):
     for file in os.listdir(directory):
