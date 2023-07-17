@@ -290,6 +290,9 @@ def upload_file(server_ip, file_dir, server_port, client_filename, server_filena
             while True:
                 try:
                     packet, (server_ip, server_port) = sock.recvfrom(block_size + 4)
+                except ConnectionResetError:
+                    print("Error: Failure to contact server")
+                    return
                 except socket.timeout:
                     print("Timeout waiting for server response")
                     return
@@ -316,6 +319,9 @@ def upload_file(server_ip, file_dir, server_port, client_filename, server_filena
     else:
         try:
             packet, (server_ip, server_port) = sock.recvfrom(block_size + 4)
+        except ConnectionResetError:
+            print("Error: Failure to contact server")
+            return
         except socket.timeout:
             print("Timeout waiting for server response")
             return
