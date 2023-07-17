@@ -166,13 +166,10 @@ def download_file(server_ip, server_port, save_dir, client_filename, server_file
 
     :param timeout: timeout duration
     """
-    # if no specific local filename is provided,
-    # the downloaded file will be saved using the same name as the original file on the TFTP server
     if server_filename is None:
         server_filename = client_filename
 
     # Create a UDP socket
-    # creates a socket for IPv4 addressing (AF_INET) and using the UDP protocol (SOCK_DGRAM)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     
@@ -333,12 +330,24 @@ def upload_file(server_ip, file_dir, server_port, client_filename, server_filena
         return
 
 def list_files_and_sizes(directory):
+    """
+    List all files in a directory and their sizes.
+    
+    :param directory: directory to be listed
+    """
+
     for file in os.listdir(directory):
         if os.path.isfile(os.path.join(directory, file)):
             size = os.path.getsize(os.path.join(directory, file))
             print(f"{file} - {size} bytes")
 
 def get_file_extension(filename):
+    """
+    Get the file extension of a file.
+    
+    :param filename: name of the file
+    """
+
     return os.path.splitext(filename)[1]
 
 
@@ -373,6 +382,7 @@ if __name__ == "__main__":
 
                 client_extension = get_file_extension(client_filename)
                 server_extension = get_file_extension(server_filename)
+                
                 if client_extension != server_extension:
                     print("Error: Client and Server file names must have the same extension.")
                     continue
@@ -392,6 +402,7 @@ if __name__ == "__main__":
                 
                 client_extension = get_file_extension(client_filename)
                 server_extension = get_file_extension(server_filename)
+
                 if client_extension != server_extension:
                     print("Error: Client and Server file names must have the same extension.")
                     continue
