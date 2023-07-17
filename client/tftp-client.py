@@ -1,6 +1,4 @@
 import socket, struct, sys, os, shutil, subprocess
-# subprocess.run(["pip", "install", "art"])
-# from art import * #Do pip3 install art
 
 # TFTP packet opcodes
 OP_RRQ = 1
@@ -140,7 +138,7 @@ def parse_packet(packet):
         error_message = packet[4:-1].decode()
         return opcode, (error_code, error_message)
 
-def tftp_client_get(server_ip, server_port, save_dir, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def download_file(server_ip, server_port, save_dir, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Download a file from a TFTP server.
 
@@ -180,12 +178,16 @@ def tftp_client_get(server_ip, server_port, save_dir, client_filename, server_fi
     # Receive DATA packets and send ACK packets
     # Saves the downloaded file to the specified save_folder
     save_path = os.path.join(save_dir, server_filename)
+
     # wb because downloading file from server to client
     with open(save_path, "wb") as f:
         block_number = 1
         while True:
             try:
                 packet, (server_ip, server_port) = sock.recvfrom(block_size + 4)
+            except ConnectionResetError:
+                print("Error: Failure to contact server")
+                return
             except socket.timeout:
                 print("Timeout waiting for server response")
                 return
@@ -243,12 +245,28 @@ def tftp_client_get(server_ip, server_port, save_dir, client_filename, server_fi
                 print(f"Error {error_code}: {error_message}")
                 f.close()
                 # removes file because corrupted
-                os.remove(os.path.join(".", server_filename))
+                os.remove(save_path)
                 return
 
-def tftp_client_put(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
+def upload_file(server_ip, file_dir, server_port, client_filename, server_filename=None, mode=MODE_OCTET, block_size=DEFAULT_BLOCK_SIZE, timeout=DEFAULT_TIMEOUT):
     """
     Upload a file to a TFTP server.
+
+    :param server_ip: IP address of the TFTP server.
+
+    :param server_port: port number on which the TFTP server is listening
+
+    :param file_dir: directory where the file to be uploaded is located
+
+    :param client_filename: name of the file to be uploaded
+
+    :param server_filename:  name of the file to be saved on the TFTP server
+
+    :param mode: represents the TFTP transfer mode
+
+    :param block_size: block size for data packets during file transfer
+
+    :param timeout: timeout duration
     """
 
     if server_filename is None:
@@ -317,13 +335,17 @@ def list_files_and_sizes(directory):
 def get_file_extension(filename):
     return os.path.splitext(filename)[1]
 
-# in the main, ask the user to enter the server IP address, port number, and the file name to be downloaded or uploaded
-# then call the appropriate function to download or upload the file
+
 if __name__ == "__main__":
     print('\n' * 50)
-    print("TFTP Client")
+    print(" _____  _____  _____  ____     ____  _  _               _")
+    print("|_   _||  ___||_   _||  _ \   / ___|| |(_)  ___  _ __  | |_")
+    print("  | |  | |_     | |  | |_) | | |    | || | / _ \| '_ \ | __|")
+    print("  | |  |  _|    | |  |  __/  | |___ | || ||  __/| | | || |_")
+    print("  |_|  |_|      |_|  |_|      \____||_||_| \___||_| |_| \__|")
 
     server_ip = input("Server IP: ")
+    
     while True:
 
         command = input("Command (get/put/ls/exit): ")
@@ -348,7 +370,7 @@ if __name__ == "__main__":
                 if client_extension != server_extension:
                     print("Error: Client and Server file names must have the same extension.")
                     continue
-                tftp_client_get(server_ip, DEFAULT_PORT, save_folder, server_filename, client_filename)
+                download_file(server_ip, DEFAULT_PORT, save_folder, server_filename, client_filename)
             
             elif command == "put":
                 file_dir = input("File directory of file to upload (Press Enter to use current directory):  ")
@@ -368,7 +390,7 @@ if __name__ == "__main__":
                     print("Error: Client and Server file names must have the same extension.")
                     continue
                 
-                tftp_client_put(server_ip, file_dir, DEFAULT_PORT, client_filename, server_filename)
+                upload_file(server_ip, file_dir, DEFAULT_PORT, client_filename, server_filename)
         
         else:
             print("Invalid command")
