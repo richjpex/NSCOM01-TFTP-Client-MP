@@ -29,6 +29,6 @@ The client program may be implemented using either C, Java or Python sockets and
 - Handling of duplicate ACK
 - User prompt for file not found, access violation, and disk full errors
 
-Support for option negotiation will merit additional points if correctly implemented
+Support for option negotiation will merit additional points if correctly implemented (Not implemented in this program)
 - Option to specify transfer block size
 - Communicate transfer size to server when uploading
